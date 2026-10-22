@@ -1,0 +1,14 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated scan output can contain sensitive host information
+audit-report/
+quick-report/
+*.log
+
+# Operating-system files
+.DS_Store
+Thumbs.db

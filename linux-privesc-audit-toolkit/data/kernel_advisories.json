@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "last_reviewed": "",
+  "source_policy": "Add a rule only after verifying the affected distribution package range against its official security tracker. An upstream kernel version alone is not reliable evidence because distributions backport fixes.",
+  "advisories": []
+}
