@@ -34,46 +34,7 @@ The central security idea is simple:
 3. Copy the HTTPS repository URL.
 4. After extracting the project folder in Kali, run:
 
-```bash
-cd ~/Downloads/linux-privesc-audit-toolkit
-git init
-git add .
-git status
-git commit -m "Initial detection-only Linux audit toolkit"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/linux-privesc-audit-toolkit.git
-git push -u origin main
-```
 
-If Git asks for your identity:
-
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your-github-email@example.com"
-```
-
-Important Git words:
-
-- `git add`: choose changed files for the next snapshot.
-- `git commit`: save a local project snapshot with a meaningful message.
-- `git push`: upload the committed snapshots to GitHub.
-- `git status`: always run this before committing. It tells you what will change.
-
-Useful commit sequence:
-
-```bash
-git add .
-git commit -m "Add project documentation"
-git push
-
-git add linux_audit.py
-git commit -m "Add local permission audit modules"
-git push
-
-git add README.md docs
-git commit -m "Document Kali lab validation workflow"
-git push
-```
 
 ## Phase 2: Run the toolkit in Kali
 
@@ -288,37 +249,8 @@ Before submitting or publishing:
 
 ## Phase 6: Final report
 
-Open `Linux Privilege Escalation Audit Toolkit Project Report Template.docx` and replace the bracketed fields. Use this section order:
 
-1. Executive summary
-2. Scope and authorization
-3. Objective
-4. Methodology
-5. Toolkit architecture
-6. Test environment and screenshots
-7. Validated findings table
-8. Kernel advisory review
-9. Limitations
-10. Conclusion and next improvement
-
-Do not invent findings. A clean Kali VM may have mostly expected configurations. That is still a valid project if you explain why the scanner flagged them and how you validated them.
-
-## Phase 7: Presentation
-
-Use eight slides:
-
-1. Project title, your name, organization, date
-2. Objective and authorized detection-only scope
-3. Audit workflow
-4. Scanner modules and concepts
-5. Report design and manual validation method
-6. Kali lab demonstration screenshots
-7. Validated findings and mitigation table
-8. Conclusion, lessons learned, and next improvement
-
-Keep slides factual. Use your report evidence, not generic claims such as “the system was hacked” or “all SUID files are vulnerable.”
-
-## Suggested repository layout
+## Repository layout
 
 ```text
 linux-privesc-audit-toolkit/
@@ -329,7 +261,7 @@ linux-privesc-audit-toolkit/
 │   └── kernel_advisories.json
 └── docs/
     ├── learning-guide.md
-    └── submission-checklist.md
+    └── COMPLETE_PROJECT_GUIDE.md
 ```
 
 Keep generated reports outside Git or ensure they remain ignored. Commit source code, documentation, harmless screenshots after redaction, and any reviewed test cases.
@@ -348,19 +280,5 @@ The tool skips that module safely. Install the distribution package that provide
 
 Expected for a normal-user audit. The scanner records what it can inspect. Do not automatically rerun as root.
 
-### Git asks for login during `git push`
 
-Complete the browser sign-in or use a GitHub personal access token as instructed by GitHub. Do not share a token in chat, screenshots, source code, or Git commits.
 
-### Git says there is nothing to commit
-
-Run `git status`. It means no tracked project files changed since the previous commit.
-
-## What a strong intern submission demonstrates
-
-- You understand Linux permissions, not only tool output.
-- You stayed within an authorized, detection-only scope.
-- You made the code readable and documented its limitations.
-- You validated findings manually.
-- You recommended proportionate defensive fixes.
-- Your Git history shows steady, understandable progress.

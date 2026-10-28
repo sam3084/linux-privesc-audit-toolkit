@@ -355,8 +355,13 @@ def scan_capabilities(audit: Audit, enabled: bool) -> None:
     except subprocess.TimeoutExpired:
         audit.notes.append("getcap scan timed out after 180 seconds; it was skipped.")
         return
+    if completed.returncode != 0:
+        audit.notes.append(
+            f"getcap exited with status {completed.returncode}; capability results may be incomplete "
+            "(permission-denied messages are intentionally not treated as findings)."
+        )
     for line in completed.stdout.splitlines():
-        if not line.strip():
+        if not line.strip() or " = " not in line:
             continue
         path_text, _, capability = line.partition(" ")
         high_impact = any(cap in capability for cap in ("cap_setuid", "cap_setgid", "cap_dac_override", "cap_sys_admin"))
@@ -431,8 +436,17 @@ def cron_command_paths(line: str) -> list[Path]:
 
 
 def path_has_nonowner_write(path: Path) -> bool:
+    """Check the target's permissions, not a symlink's conventional 0777 mode.
+
+    Only regular files and directories are relevant here. Device nodes such as
+    /dev/null are intentionally excluded: their normal write permissions do not
+    mean a user can replace or modify the device itself.
+    """
     try:
-        return any_nonowner_writable(path.lstat().st_mode)
+        status = path.stat()  # follow symlinks and inspect the actual target
+        if not (stat.S_ISREG(status.st_mode) or stat.S_ISDIR(status.st_mode)):
+            return False
+        return any_nonowner_writable(status.st_mode)
     except OSError:
         return False
 
@@ -453,7 +467,7 @@ def scan_cron(audit: Audit) -> None:
                 audit.notes.append(f"Could not read {directory}: {exc}")
     for cron_file in sorted(set(cron_files)):
         try:
-            status = cron_file.lstat()
+            status = cron_file.stat()  # inspect target; symlink mode bits are not meaningful
         except OSError:
             continue
         if any_nonowner_writable(status.st_mode):
@@ -475,11 +489,16 @@ def scan_cron(audit: Audit) -> None:
             line = raw_line.strip()
             if not line or line.startswith("#"):
                 continue
-            root_context = cron_file_is_root_context(cron_file)
-            if cron_file.name == "crontab" or str(cron_file).startswith("/etc/cron.d/"):
+            # /etc/crontab and /etc/cron.d entries include an explicit user
+            # field; only treat the command as root-context when that field is
+            # actually root. Periodic directories contain scripts normally run
+            # by root's cron infrastructure.
+            cron_path = str(cron_file)
+            if cron_path == "/etc/crontab" or cron_path.startswith("/etc/cron.d/"):
                 fields = line.split()
-                if len(fields) >= 7 and fields[5] == "root":
-                    root_context = True
+                root_context = len(fields) >= 7 and fields[5] == "root"
+            else:
+                root_context = cron_file_is_root_context(cron_file)
             if not root_context:
                 continue
             for command_path in cron_command_paths(line):
@@ -546,7 +565,9 @@ def scan_systemd(audit: Audit) -> None:
                 continue
             seen.add(unit_file)
             try:
-                status = unit_file.lstat()
+                status = unit_file.stat()  # unit symlinks are common; inspect target permissions
+                if not stat.S_ISREG(status.st_mode):
+                    continue
                 content = unit_file.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
@@ -566,7 +587,7 @@ def scan_systemd(audit: Audit) -> None:
             if not root_context:
                 continue
             for executable in service_exec_paths(content):
-                if executable.exists() and path_has_nonowner_write(executable):
+                if path_has_nonowner_write(executable):
                     audit.add(
                         "SVC-002",
                         "systemd",
@@ -767,6 +788,11 @@ def main() -> int:
     scan_cron(audit)
     scan_systemd(audit)
     scan_kernel_advisories(audit, arguments.kernel_rules)
+    if audit.stats.get("walk_errors") or audit.stats.get("stat_errors"):
+        audit.notes.append(
+            "Some filesystem paths could not be examined due to permissions or filesystem errors; "
+            "the scan is incomplete. Run with appropriate authorization and review scanner_stats."
+        )
     report = report_dict(audit, system_info, arguments)
     output_dir = arguments.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
